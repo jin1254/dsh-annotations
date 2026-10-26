@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { chromium, type Browser, type Page } from 'playwright'
-import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFailed } from 'vitest'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type { StreamChunk } from '@deepseek-ai/dsh-llm'
 import { launchWebScaffold, watchConsole, type WebScaffold } from './scaffold.ts'
@@ -23,17 +23,19 @@ describe('web e2e: independent annotations', () => {
   let page: Page
   let consoleWatch: ReturnType<typeof watchConsole>
   const events: SessionEvent[] = []
-  beforeAll(async () => {
+  beforeEach(async ({ task }) => {
+    events.length = 0
     dir = await mkdtemp(join(tmpdir(), 'dsh-annotations-web-'))
     const override = join(dir, 'replay.json')
+    const fromBottom = task.name.includes('scrollport bottom')
     await writeFile(override, JSON.stringify([
       { kind: 'chunks', chunks: chunks([
-        'A quoted statement needs evidence.', 'Another paragraph remains selectable.',
+        'A quoted statement needs evidence.' + (fromBottom ? ' Additional context remains within this same paragraph.'.repeat(160) : ''), 'Another paragraph remains selectable.',
         ...Array.from({ length: 32 }, (_, index) => `Context paragraph ${String(index + 1)} provides more material to review.`),
       ].join('\n\n')) },
       { kind: 'chunks', chunks: chunks('Annotation received with the original quote and your comment.') },
       { kind: 'chunks', chunks: chunks('Mixed text and annotations received.') },
-    ]))
+    ].slice(0, task.name.startsWith('fits drafts') ? 3 : 1)))
     scaffold = await launchWebScaffold({
       replayFixture: join(dir, 'override-only.jsonl'), replayOverride: override,
       extraOverlayPath: join(packageDir, 'cordis.patch.yml'), extraInstallAnchors: [join(packageDir, 'package.json')],
@@ -45,10 +47,89 @@ describe('web e2e: independent annotations', () => {
     await page.goto(scaffold.authenticatedUrl)
     await connectFreshWorkspace(page, scaffold.workspaceCwd, 'annotations-e2e')
   })
-  afterAll(async () => {
+  afterEach(async () => {
     try { await browser?.close() } finally {
       try { await scaffold?.close() } finally { if (dir !== undefined) await rm(dir, { recursive: true, force: true }) }
     }
+  })
+
+  async function pendingNote(longParagraph = false) {
+    const composer = page.locator('[data-composer-input][contenteditable="true"]').last()
+    await composer.fill('Give me a statement to review.')
+    const settled = scaffold.whenTurnSettled(30_000)
+    await composer.press('Enter')
+    await settled
+    const quote = page.locator('[data-chat-node-key][data-chat-flow-kind="assistant-step"]')
+      .getByText('A quoted statement needs evidence.', { exact: !longParagraph }).first()
+    await quote.scrollIntoViewIfNeeded()
+    await quote.evaluate(element => {
+      const range = document.createRange()
+      range.setStart(element.firstChild!, 0)
+      range.setEnd(element.firstChild!, 'A quoted statement needs evidence.'.length)
+      document.getSelection()?.removeAllRanges()
+      document.getSelection()?.addRange(range)
+    })
+    await quote.dispatchEvent('mouseup')
+    await page.getByRole('button', { name: 'Add to conversation', exact: true }).click()
+    const editor = page.getByRole('textbox', { name: 'Add a comment', exact: true })
+    await editor.fill('Saved comment.')
+    await editor.press('Enter')
+    const dock = page.locator('[data-annotation-dock]')
+    await dock.getByRole('button', { name: '1 annotations', exact: true }).click()
+    const scroller = page.locator('[data-conversation-scroll]').last()
+    await scroller.hover()
+    await page.mouse.wheel(0, 10000)
+    await expect.poll(() => scroller.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(2)
+    await expect.poll(() => quote.evaluate(element => element.getBoundingClientRect().bottom)).toBeLessThan(0)
+    return { composer, quote, editor, dock, scroller }
+  }
+
+  it('focuses the comment field immediately on every edit request without moving the scrollport', async () => {
+    onTestFailed(() => saveFailureShot(page, 'annotations-focus'))
+    const { composer, editor, dock, scroller } = await pendingNote()
+    const bottom = await scroller.evaluate(element => element.scrollTop)
+    const edit = dock.getByRole('button', { name: 'Edit annotation', exact: true })
+    await edit.click()
+    await expect.poll(() => editor.evaluate(element => element === document.activeElement)).toBe(true)
+    await page.keyboard.press('End')
+    await page.keyboard.type(' Typed without another click.')
+    expect(await editor.inputValue()).toBe('Saved comment. Typed without another click.')
+    expect(await scroller.evaluate((element, initialTop) => Math.abs(element.scrollTop - initialTop), bottom)).toBeLessThan(2)
+    await edit.click()
+    await expect.poll(() => editor.evaluate(element => element === document.activeElement)).toBe(true)
+    await editor.press('Escape')
+    await expect.poll(() => composer.evaluate(element => element === document.activeElement)).toBe(true)
+  })
+
+  it('jumps from the scrollport bottom to the exact annotated text and retains its highlight', async () => {
+    onTestFailed(() => saveFailureShot(page, 'annotations-bottom'))
+    const { quote, dock, scroller } = await pendingNote(true)
+    await dock.getByRole('button', { name: '1. A quoted statement needs evidence.', exact: true }).click()
+    await expect.poll(() => quote.evaluate(element => {
+      const range = document.createRange()
+      range.setStart(element.firstChild!, 0)
+      range.setEnd(element.firstChild!, 'A quoted statement needs evidence.'.length)
+      const rect = range.getBoundingClientRect()
+      const viewport = element.closest('[data-conversation-scroll]')!.getBoundingClientRect()
+      return rect.top >= viewport.top && rect.bottom <= viewport.bottom
+    })).toBe(true)
+    expect(await page.evaluate(() => CSS.highlights.size)).toBeGreaterThan(0)
+    // A content resize after landing must preserve the explicit reading position.
+    await scroller.evaluate(element => new Promise<void>(resolve => {
+      const observer = new ResizeObserver(() => {
+        observer.disconnect()
+        requestAnimationFrame(() => { requestAnimationFrame(() => { resolve() }) })
+      })
+      observer.observe(element)
+      element.style.paddingBottom = '24px'
+    }))
+    await expect.poll(() => quote.evaluate(element => {
+      const range = document.createRange()
+      range.setStart(element.firstChild!, 0)
+      range.setEnd(element.firstChild!, 'A quoted statement needs evidence.'.length)
+      return range.getBoundingClientRect().top
+    })).toBeGreaterThan(0)
+    expect(await scroller.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeGreaterThan(100)
   })
 
   it('fits drafts to the composer, clears round markers and preserves historical previews and source jumps', async () => {

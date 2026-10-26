@@ -9,7 +9,7 @@ if (harness === undefined) throw new Error('Set DSH_TEST_HARNESS to a separately
 const test = resolve(harness, 'apps/web/tests/community-annotations.e2e.ts')
 await writeFile(test, await readFile(resolve(root, 'tests/integration/annotations.web.ts')), { flag: 'wx' })
 try {
-  const child = spawn(process.execPath, ['node_modules/vitest/vitest.mjs', 'run', '--config', 'vitest.web.config.ts', test], {
+  const child = spawn(process.execPath, ['node_modules/vitest/vitest.mjs', 'run', '--config', 'vitest.web.config.ts', test, ...process.argv.slice(2)], {
     cwd: harness, stdio: 'inherit', env: { ...process.env, DSH_ANNOTATIONS_PACKAGE: process.env.DSH_ANNOTATIONS_PACKAGE ?? root },
   })
   const code = await new Promise((accept, reject) => { child.once('error', reject); child.once('exit', accept) })

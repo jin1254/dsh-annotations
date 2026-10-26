@@ -24,6 +24,8 @@ export type LocalNote = z.infer<typeof localNoteSchema>
 export interface AnnotationPosition { readonly left: number; readonly top: number }
 /** Recoverable editor state shared with the overlay entry. */
 export interface AnnotationEditor {
+  /** New explicit edit requests focus once after the overlay becomes visible. */
+  readonly focusRequest: number
   readonly id?: AnnotationId
   readonly anchor: AnnotationAnchor
   readonly comment: string
@@ -48,6 +50,7 @@ export class AnnotationModel {
   readonly contribution: ComposerContributionSource = { pending: this.pending, capture: () => this.reserve(this.state.getSnapshot().notes.filter(note => note.status === 'draft')) }
   private readonly key: string
   private persistenceReadable = true
+  private focusRequest = 0
 
   /**
    * @param sessionId - owning Session identity.
@@ -98,7 +101,7 @@ export class AnnotationModel {
    * @param position - viewport anchor for the editor.
    */
   create(anchor: AnnotationAnchor, position: AnnotationPosition): void {
-    this.present({ selection: null, editor: { anchor, position, comment: '' } })
+    this.present({ selection: null, editor: { anchor, position, comment: '', focusRequest: ++this.focusRequest } })
   }
 
   /**
@@ -109,7 +112,7 @@ export class AnnotationModel {
   edit(id: AnnotationId, position: AnnotationPosition): void {
     const note = this.state.getSnapshot().notes.find(item => item.id === id)
     if (note === undefined || note.status === 'sending' || note.status === 'uncertain') return
-    this.present({ selection: null, editor: { id, anchor: note.anchor, comment: note.comment, position } })
+    this.present({ selection: null, editor: { id, anchor: note.anchor, comment: note.comment, position, focusRequest: ++this.focusRequest } })
   }
 
   /**

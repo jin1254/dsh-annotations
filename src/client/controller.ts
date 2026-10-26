@@ -170,7 +170,15 @@ export class AnnotationController {
       const range = sourceRange(this.source, anchor)
       if (range === null) { this.model.present({ issue: 'locateError' }); return }
       const parent = range.startContainer.parentElement
-      parent?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      const scroller = parent?.closest<HTMLElement>('[data-conversation-scroll]')
+      if (scroller === null || scroller === undefined) parent?.scrollIntoView({ block: 'center', behavior: 'instant' })
+      else {
+        const rect = range.getClientRects()[0] ?? range.getBoundingClientRect()
+        const viewport = scroller.getBoundingClientRect()
+        // Center the selected line, even when its enclosing paragraph exceeds the viewport.
+        scroller.scrollTo({ top: scroller.scrollTop + rect.top - viewport.top - (scroller.clientHeight - rect.height) / 2,
+          behavior: 'instant' })
+      }
       this.active = anchor
       this.model.present({ issue: null })
       this.refresh()

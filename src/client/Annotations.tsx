@@ -1,5 +1,5 @@
 /** Annotation overlays and compact draft and historical-message labels. */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Button, HoverCard, InlineEditor, useAnchoredPosition } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { AnnotationNote } from './protocol.ts'
@@ -21,6 +21,12 @@ export function AnnotationOverlay({
   const panel = useRef<HTMLDivElement>(null)
   const target = state.editor ?? state.selection
   const position = useAnchoredPosition({ open: target !== null, anchorRef: anchor, panelRef: panel, side: 'top', gap: 8, margin: 8 })
+  const focusRequest = state.editor?.focusRequest
+  const positioned = position !== null
+  useLayoutEffect(() => {
+    if (focusRequest === undefined || !positioned) return
+    panel.current?.querySelector('textarea')?.focus({ preventScroll: true })
+  }, [focusRequest, positioned])
   return <><span hidden ref={seat} />{createPortal(<div className={css.layer} data-annotation-ui="">
     {state.bubbles.map((bubble, index) => <button type="button" key={bubble.id} className={css.bubble}
       style={{ left: bubble.position.left + 3 + state.bubbles.slice(0, index).filter(previous =>

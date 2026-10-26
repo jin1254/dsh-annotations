@@ -17,7 +17,7 @@ This distribution uses native reference chips: saving a comment automatically at
 3. Reopen a comment through its blue number; edit, delete, or navigate through the pending-note list.
 4. Continue typing in the main composer or submit the labels alone. Sent labels expose hover previews and source navigation.
 
-The editor’s **Go to source** action retains the unsaved comment. Successful admission clears this round’s blue markers and restarts the next round at 1; historical labels retain their source coordinates.
+Opening or reopening **Edit annotation** focuses the comment field without scrolling the conversation. The editor’s **Go to source** action retains the unsaved comment; navigation from the bottom aligns the selected text, including inside long paragraphs. Successful admission clears this round’s blue markers and restarts the next round at 1; historical labels retain their source coordinates.
 
 Unsent notes stay in this browser and do not synchronize between devices. Native submission failure restores reference chips. If closing the page or cancellation leaves admission uncertain, inspect the conversation before explicitly attaching the notes again. Disable other annotation plugins while using this one.
 
@@ -33,7 +33,6 @@ Annotations travel in one ordinary user message: optional composer text, a reada
 
 - Compatibility is currently declared only for 0.2.1-rc.2. Source navigation uses that release’s existing Chat node markers; ambiguous sources retain their comments and report a navigation failure.
 - Reasoning, tool cards, cross-message selections, and mobile selection gestures are unsupported. Browsers without CSS Custom Highlights retain comments without a text fill.
-- Recorded and deferred: editing does not reliably focus the comment field, and source navigation may fail after scrolling to the conversation’s bottom. Both reports await further reproduction.
 
 ## Development and validation
 
