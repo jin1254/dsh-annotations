@@ -1,0 +1,20 @@
+.layer { position: fixed; inset: 0; pointer-events: none; z-index: 110; }
+.layer button, .popover { pointer-events: auto; }
+.anchor { position: fixed; width: 0; height: 0; }
+.popover { position: fixed; max-width: calc(100vw - 16px); border-radius: var(--dsw-radius-lg); background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); box-shadow: var(--dsw-elevation-panel); }
+.editor { width: min(360px, calc(100vw - 16px)); box-sizing: border-box; padding: 12px; }
+.actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.spacer { flex: 1; }
+.bubble { position: fixed; width: 22px; height: 22px; padding: 0; border: 1px solid var(--dsw-alias-bg-layer-1); border-radius: 50%; corner-shape: round; background: var(--dsw-alias-state-business-primary); color: var(--dsw-static-neutral-bluish-00); font-size: 12px; font-weight: 500; cursor: pointer; }
+.dock { box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; width: calc(100% - var(--dsh-composer-side-clearance) - var(--dsh-composer-side-clearance)); max-width: var(--dsh-composer-card-max-width); min-width: 0; margin: 0 auto; padding: 0 0 8px; font-size: 13px; }
+.tag { display: inline-flex; align-items: center; padding: 5px 10px; border: 0.5px solid var(--dsw-alias-border-l4); border-radius: var(--dsw-radius-lg); background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-state-business-primary); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.tag:focus-visible, .bubble:focus-visible, .noteLink:focus-visible { outline: var(--dsw-focus-ring-width) solid var(--dsw-focus-ring-color); outline-offset: 2px; }
+.preview, .note { display: flex; flex-direction: column; gap: 8px; max-width: 100%; }
+.note + .note { margin-top: 12px; }
+.caption { opacity: .75; font-size: 12px; }
+.quote, .opinion { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+.list { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow: auto; padding: 4px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 8px; border: 0.5px solid var(--dsw-alias-border-l3); border-radius: var(--dsw-radius-md); background: var(--dsw-alias-bg-layer-1); }
+.noteLink { flex: 1; min-width: min(140px, 100%); border: 0; padding: 4px; background: none; color: var(--dsw-alias-label-primary); text-align: left; cursor: pointer; white-space: normal; overflow-wrap: anywhere; }
+.error { color: var(--dsw-alias-state-error-primary); margin: 0; font-size: 13px; }
+.sent, .sentList { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; max-width: 100%; }

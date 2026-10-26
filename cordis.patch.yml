@@ -1,0 +1,3 @@
+- insert:
+    - id: community-annotations
+      name: '@jin1254/dsh-annotations'
