@@ -1,6 +1,6 @@
 {
   "name": "@jin1254/dsh-annotations",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Select assistant text, add comments, and send annotation labels in DSH Web",
   "type": "module",
   "main": "lib/index.js",

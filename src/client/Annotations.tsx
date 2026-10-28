@@ -36,7 +36,7 @@ export function AnnotationOverlay({
       aria-label={`${t('edit')} ${bubble.number}`} onClick={() => { edit(bubble.id) }}>{bubble.number}</button>)}
     {target !== null && <>
       <span ref={anchor} className={css.anchor} style={target.position} />
-      <div ref={panel} className={css.popover} style={position ?? { visibility: 'hidden' }}>
+      <div ref={panel} data-annotation-popover="" className={css.popover} style={position ?? { visibility: 'hidden' }}>
         {state.editor === null
           ? <Button size="sm" onMouseDown={(event) => { event.preventDefault() }}
             onClick={add} onKeyDown={(event) => { if (event.key === 'Escape') cancel() }}>{t('add')}</Button>
@@ -65,7 +65,7 @@ function Preview({ notes, quoteLabel, opinionLabel }: {
   quoteLabel: string
   opinionLabel: string
 }) {
-  return <span className={css.preview}>{notes.map(note => <span key={note.id} className={css.note}>
+  return <span className={css.preview} data-annotation-preview="">{notes.map(note => <span key={note.id} className={css.note}>
     <span className={css.caption}>{note.number}. {quoteLabel}</span>
     <span className={css.quote}>{note.anchor.quote}</span>
     <span className={css.caption}>{opinionLabel}</span>
@@ -76,31 +76,29 @@ function Preview({ notes, quoteLabel, opinionLabel }: {
 /**
  * Keep pending annotations separate from the ordinary Lexical draft.
  * @param props - live Session annotation state and explicit note actions.
- * @returns pending count and the optionally expanded source list.
+ * @returns expanded pending rows and any recovery notices.
  */
 export function AnnotationDock({ useAnnotationState, edit, remove, reattach, locate, t }: AnnotationDockProps) {
   const state = useAnnotationState(value => value)
-  const [expanded, setExpanded] = useState(false)
-  const notes = state.notes.filter(note => note.status !== 'sent')
+  // Uncertain submissions have no native reference until explicitly reattached.
+  const notes = state.notes.filter(note => note.status !== 'sent' && (state.expanded || note.status === 'uncertain'))
   if (notes.length === 0 && state.issue === null) return null
   return <div className={css.dock} data-annotation-ui="" data-annotation-dock="">
     {state.issue !== null && <p className={css.error} role="alert">{t(state.issue)}</p>}
-    {notes.length > 0 && <>
-      <HoverCard inline anchor={<button type="button" className={css.tag} aria-expanded={expanded}
-        onClick={() => { setExpanded(value => !value) }}>{t('count', { count: notes.length })}</button>}
-      content={<Preview notes={notes} quoteLabel={t('quote')} opinionLabel={t('opinion')} />} />
-      {expanded && <div className={css.list}>{notes.map(note => <div key={note.id} className={css.row}>
+    {notes.length > 0 && <div className={css.list}>{notes.map(note => <div key={note.id} className={css.row} data-annotation-row="">
+      <span className={css.rowPreview}><HoverCard inline anchor={<span className={css.rowText}>
         <button type="button" className={css.noteLink} onClick={() => { locate(note.anchor) }}>
           {note.number}. {note.anchor.quote}
         </button>
-        {note.status === 'sending' ? <span>{t('sending')}</span> : note.status === 'uncertain'
-          ? <div><p className={css.error}>{t('uncertain')}</p><Button size="sm" onClick={() => { reattach(note.id) }}>{t('reattach')}</Button></div>
-          : <span className={css.actions}>
-            <Button size="sm" variant="outline" onClick={() => { edit(note.id) }}>{t('edit')}</Button>
-            <Button size="sm" variant="outline" onClick={() => { remove(note.id) }}>{t('delete')}</Button>
-          </span>}
-      </div>)}</div>}
-    </>}
+        <span className={css.rowComment} data-annotation-comment="">{note.comment}</span>
+      </span>} content={<Preview notes={[note]} quoteLabel={t('quote')} opinionLabel={t('opinion')} />} /></span>
+      {note.status === 'sending' ? <span>{t('sending')}</span> : note.status === 'uncertain'
+        ? <div><p className={css.error}>{t('uncertain')}</p><Button size="sm" onClick={() => { reattach(note.id) }}>{t('reattach')}</Button></div>
+        : <span className={css.actions}>
+          <Button size="sm" variant="outline" onClick={() => { edit(note.id) }}>{t('edit')}</Button>
+          <Button size="sm" variant="outline" onClick={() => { remove(note.id) }}>{t('delete')}</Button>
+        </span>}
+    </div>)}</div>}
   </div>
 }
 

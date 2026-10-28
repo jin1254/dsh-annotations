@@ -34,6 +34,8 @@ export interface AnnotationEditor {
 /** View state published by the Session's annotation controller. */
 export interface AnnotationState {
   readonly notes: readonly LocalNote[]
+  /** Pending list visibility controlled by the native composer reference. */
+  readonly expanded: boolean
   readonly editor: AnnotationEditor | null
   readonly selection: { readonly anchor: AnnotationAnchor; readonly position: AnnotationPosition } | null
   readonly bubbles: readonly { readonly id: AnnotationId; readonly number: number; readonly position: AnnotationPosition }[]
@@ -43,7 +45,7 @@ export interface AnnotationState {
 /** Owns drafts, persistence, and the producer consumed by the official composer. */
 export class AnnotationModel {
   /** Current drafts and shared overlay state. */
-  readonly state = createSnapshotStore<AnnotationState>({ notes: [], editor: null, selection: null, bubbles: [], issue: null })
+  readonly state = createSnapshotStore<AnnotationState>({ notes: [], expanded: false, editor: null, selection: null, bubbles: [], issue: null })
   /** Readiness source observed by the native composer. */
   readonly pending = createSnapshotStore(false)
   /** Session-local producer for ordinary user-message submissions. */
@@ -87,7 +89,7 @@ export class AnnotationModel {
 
   /**
    * Publish interaction-only fields without writing browser storage.
-   * @param patch - editor, selection, bubble, or visible issue changes.
+   * @param patch - list visibility, editor, selection, bubble, or visible issue changes.
    */
   present(patch: Partial<Omit<AnnotationState, 'notes'>>): void {
     const previous = this.state.getSnapshot()
@@ -151,7 +153,7 @@ export class AnnotationModel {
    * @param id - note the user elected to send again after inspecting history.
    */
   reattach(id: AnnotationId): void {
-    this.commit(this.state.getSnapshot().notes.map(note => note.id === id && note.status === 'uncertain' ? { ...note, status: 'draft' } : note))
+    this.commit(this.state.getSnapshot().notes.map(note => note.id === id && note.status === 'uncertain' ? { ...note, status: 'draft' } : note), { expanded: true })
   }
 
   private commit(notes: readonly LocalNote[], patch: Partial<AnnotationState> = {}): void {
@@ -162,7 +164,7 @@ export class AnnotationModel {
       issue = 'storageError'
       console.error('[annotations] Browser persistence failed; notes retained in memory', error)
     }
-    this.state.set({ ...previous, ...patch, notes, issue })
+    this.state.set({ ...previous, ...patch, ...(notes.length === 0 ? { expanded: false } : {}), notes, issue })
     this.pending.set(notes.some(note => note.status === 'draft'))
   }
 

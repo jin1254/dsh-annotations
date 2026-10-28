@@ -97,9 +97,9 @@ export function apply(ctx: Context): void {
     openReference: (session, reference) => {
       const value = readReference(reference.ref)
       if (value.sessionId !== session.sessionId) return false
-      const first = value.notes[0]
-      if (first === undefined) return false
-      void recordFor(session.sessionId).controller.locate(first.anchor)
+      if (value.notes.length === 0) return false
+      const model = recordFor(session.sessionId).controller.model
+      model.present({ expanded: !model.state.getSnapshot().expanded })
       return true
     },
   }), 'annotations: native references')

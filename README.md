@@ -8,13 +8,13 @@ Select assistant text in DSH Web, add a comment, and send it with your next mess
 
 Verified against the official **DSH 0.2.1-rc.2 Web UI**. This community plugin requires no host patches or custom APIs and is not affiliated with DeepSeek. Other releases and desktop distributions are unverified.
 
-This distribution uses native reference chips: saving a comment automatically attaches a compact label to the composer while the count and note list remain above it. Comments are never written into editable text. A label-only draft can be submitted with Enter or Send, and ordinary text can accompany it. The history navigator receives a readable annotation title.
+This distribution uses native reference chips: saving a comment automatically attaches a compact label to the composer whose click expands or collapses the note list above it. Each row shows the quote on the left and a gray comment preview on the right; long text is truncated, with full content available on hover or keyboard focus. Comments are never written into editable text. A label-only draft can be submitted with Enter or Send, and ordinary text can accompany it. The history navigator receives a readable annotation title.
 
 ## Use
 
 1. Select a passage in a completed assistant reply and choose **Add to conversation**.
 2. Write a comment. Enter saves, Escape cancels, and Shift+Enter inserts a newline.
-3. Reopen a comment through its blue number; edit, delete, or navigate through the pending-note list.
+3. Click the composer reference chip to expand or collapse the pending-note list. Click a row’s quote to navigate; its buttons edit or delete the comment. The blue number also reopens the editor above the original text.
 4. Continue typing in the main composer or submit the labels alone. Sent labels expose hover previews and source navigation.
 
 Opening or reopening **Edit annotation** focuses the comment field without scrolling the conversation. The editor’s **Go to source** action retains the unsaved comment; navigation from the bottom aligns the selected text, including inside long paragraphs. Successful admission clears this round’s blue markers and restarts the next round at 1; historical labels retain their source coordinates.

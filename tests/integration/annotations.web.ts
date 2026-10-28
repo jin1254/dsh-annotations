@@ -75,7 +75,7 @@ describe('web e2e: independent annotations', () => {
     await editor.fill('Saved comment.')
     await editor.press('Enter')
     const dock = page.locator('[data-annotation-dock]')
-    await dock.getByRole('button', { name: '1 annotations', exact: true }).click()
+    await composer.locator('[data-composer-chip="dsh-annotations"]').click()
     const scroller = page.locator('[data-conversation-scroll]').last()
     await scroller.hover()
     await page.mouse.wheel(0, 10000)
@@ -130,6 +130,72 @@ describe('web e2e: independent annotations', () => {
       return range.getBoundingClientRect().top
     })).toBeGreaterThan(0)
     expect(await scroller.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeGreaterThan(100)
+  })
+
+  it('toggles the pending list from its only reference chip and edits above the source', async () => {
+    onTestFailed(() => saveFailureShot(page, 'annotations-layout'))
+    const { composer, quote, editor, dock, scroller } = await pendingNote()
+    const chip = composer.locator('[data-composer-chip="dsh-annotations"]')
+    const row = dock.locator('[data-annotation-row]')
+    expect(await row.count()).toBe(1)
+    expect(await dock.getByRole('button', { name: '1 annotations', exact: true }).count()).toBe(0)
+    await chip.click()
+    await expect.poll(() => dock.count()).toBe(0)
+    await chip.click()
+    await row.waitFor()
+    await expect.poll(() => scroller.evaluate(element => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThan(2)
+    expect(await quote.evaluate(element => element.getBoundingClientRect().bottom)).toBeLessThan(0)
+    await row.getByRole('button', { name: '1. A quoted statement needs evidence.', exact: true }).click()
+    await expect.poll(() => quote.evaluate(element => element.getBoundingClientRect().top)).toBeGreaterThan(0)
+    await row.getByRole('button', { name: 'Edit annotation', exact: true }).click()
+    await expect.poll(() => editor.evaluate(element => element === document.activeElement)).toBe(true)
+    await expect.poll(async () => {
+      const popover = await page.locator('[data-annotation-popover]').boundingBox()
+      const source = await quote.boundingBox()
+      return popover !== null && source !== null && popover.y + popover.height <= source.y
+    }).toBe(true)
+    const comment = 'Explain the evidence and distinguish assumptions from measured results. '.repeat(12).trim()
+    await editor.fill(comment)
+    await editor.press('Enter')
+    const preview = row.locator('[data-annotation-comment]')
+    expect(await preview.innerText()).toBe(comment)
+    for (const theme of ['dark', 'light'] as const) {
+      await page.emulateMedia({ colorScheme: theme })
+      await expect.poll(() => page.locator('body').getAttribute('data-ds-dark-theme').then(value => value !== null)).toBe(theme === 'dark')
+      for (const width of [1440, 390]) {
+        await page.setViewportSize({ width, height: 900 })
+        await expect.poll(() => preview.evaluate(element => element.scrollWidth > element.clientWidth)).toBe(true)
+        expect(await row.evaluate(element => {
+          const quote = element.querySelector('button')!
+          const comment = element.querySelector('[data-annotation-comment]')!
+          const left = quote.getBoundingClientRect()
+          const right = comment.getBoundingClientRect()
+          return left.right <= right.left && Math.abs(left.top - right.top) < 8
+            && getComputedStyle(comment).textOverflow === 'ellipsis'
+            && getComputedStyle(comment).color !== getComputedStyle(quote).color
+            && document.documentElement.scrollWidth <= window.innerWidth
+        })).toBe(true)
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await row.getByRole('button', { name: '1. A quoted statement needs evidence.', exact: true }).hover()
+    await page.locator('[data-annotation-preview]').getByText(comment, { exact: true }).waitFor()
+    await page.mouse.move(0, 0)
+    // A reload during submission must retain a visible recovery action without a native chip.
+    await page.evaluate(() => {
+      for (const key of Object.keys(localStorage).filter(key => key.startsWith('dsh-annotations/v1/'))) {
+        const saved = JSON.parse(localStorage.getItem(key)!) as { version: number; notes: { status: string }[] }
+        for (const note of saved.notes) note.status = 'sending'
+        localStorage.setItem(key, JSON.stringify(saved))
+      }
+    })
+    await page.reload()
+    await dock.getByRole('button', { name: 'Attach to next message again', exact: true }).waitFor()
+    expect(await composer.locator('[data-composer-chip="dsh-annotations"]').count()).toBe(0)
+    await dock.getByRole('button', { name: 'Attach to next message again', exact: true }).click()
+    await chip.waitFor()
+    await dock.getByRole('button', { name: 'Edit annotation', exact: true }).waitFor()
+    expect(consoleWatch.pageErrors).toEqual([])
   })
 
   it('fits drafts to the composer, clears round markers and preserves historical previews and source jumps', async () => {
@@ -197,7 +263,7 @@ describe('web e2e: independent annotations', () => {
       const marker = document.querySelector('button[aria-label="Edit annotation 1"]')!.getBoundingClientRect()
       return marker.top < rect.top && marker.bottom > rect.top
     })).toBe(true)
-    await dock.getByRole('button', { name: '1 annotations', exact: true }).click()
+    await composer.locator('[data-composer-chip="dsh-annotations"]').click()
     const verifyDock = async (): Promise<boolean> => {
       const left = await dock.boundingBox()
       const right = await page.locator('[data-composer-card]').last().boundingBox()
@@ -259,7 +325,7 @@ describe('web e2e: independent annotations', () => {
     await selectSource()
     await editor.fill('A temporary note to delete.')
     await editor.press('Enter')
-    await dock.getByRole('button', { name: '1 annotations', exact: true }).click()
+    await composer.locator('[data-composer-chip="dsh-annotations"]').click()
     await dock.getByRole('button', { name: 'Delete', exact: true }).click()
     await expect.poll(() => bubble.count()).toBe(0)
     await selectSource()

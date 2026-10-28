@@ -28,6 +28,22 @@ describe('annotation drafts', () => {
     expect(model.pending.getSnapshot()).toBe(true)
   })
 
+  it('keeps list visibility local and collapses it after the last draft is sent or removed', () => {
+    const saved = storage()
+    const model = new AnnotationModel(sid, saved)
+    add(model, 'comment')
+    const persisted = saved.getItem(`dsh-annotations/v1/${sid}`)
+    model.present({ expanded: true })
+    expect(saved.getItem(`dsh-annotations/v1/${sid}`)).toBe(persisted)
+    expect(new AnnotationModel(sid, saved).state.getSnapshot().expanded).toBe(false)
+    model.contribution.capture().settle('success')
+    expect(model.state.getSnapshot().expanded).toBe(false)
+    add(model, 'next comment')
+    model.present({ expanded: true })
+    model.remove(model.state.getSnapshot().notes[0]!.id)
+    expect(model.state.getSnapshot().expanded).toBe(false)
+  })
+
   it('freezes the sent batch, keeps new annotations pending, and restores only failed notes', () => {
     const model = new AnnotationModel(sid, storage())
     add(model, 'first')
@@ -96,6 +112,7 @@ describe('annotation drafts', () => {
     expect(restored.state.getSnapshot().notes[0]?.status).toBe('uncertain')
     restored.reattach(restored.state.getSnapshot().notes[0]!.id)
     expect(restored.pending.getSnapshot()).toBe(true)
+    expect(restored.state.getSnapshot().expanded).toBe(true)
   })
 
   it('copies old local-plugin annotations without changing their source storage', () => {

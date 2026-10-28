@@ -14,7 +14,14 @@
 .caption { opacity: .75; font-size: 12px; }
 .quote, .opinion { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
 .list { display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow: auto; padding: 4px; }
-.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 8px; border: 0.5px solid var(--dsw-alias-border-l3); border-radius: var(--dsw-radius-md); background: var(--dsw-alias-bg-layer-1); }
-.noteLink { flex: 1; min-width: min(140px, 100%); border: 0; padding: 4px; background: none; color: var(--dsw-alias-label-primary); text-align: left; cursor: pointer; white-space: normal; overflow-wrap: anywhere; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px; border: 0.5px solid var(--dsw-alias-border-l3); border-radius: var(--dsw-radius-md); background: var(--dsw-alias-bg-layer-1); }
+.rowPreview { min-width: 0; }
+.rowText { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: center; gap: 16px; }
+.noteLink { min-width: 0; border: 0; padding: 4px; background: none; color: var(--dsw-alias-label-primary); font: inherit; text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rowComment { min-width: 0; color: var(--dsw-alias-label-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 580px) {
+  .row { grid-template-columns: minmax(0, 1fr); }
+  .row > .actions { justify-content: flex-end; }
+}
 .error { color: var(--dsw-alias-state-error-primary); margin: 0; font-size: 13px; }
 .sent, .sentList { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; max-width: 100%; }
