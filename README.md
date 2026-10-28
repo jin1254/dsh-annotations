@@ -17,7 +17,7 @@ This distribution uses native reference chips: saving a comment automatically at
 3. Click the composer reference chip to expand or collapse the pending-note list. Click a row’s quote to navigate; its buttons edit or delete the comment. The blue number also reopens the editor above the original text.
 4. Continue typing in the main composer or submit the labels alone. Sent labels expose hover previews and source navigation.
 
-Opening or reopening **Edit annotation** focuses the comment field without scrolling the conversation. The editor’s **Go to source** action retains the unsaved comment; navigation from the bottom aligns the selected text, including inside long paragraphs. Successful admission clears this round’s blue markers and restarts the next round at 1; historical labels retain their source coordinates.
+Opening or reopening **Edit annotation** focuses the comment field without scrolling the conversation. The editor fills its compact rounded panel and grows with the text up to the viewport limits; its footer contains Delete, Cancel, and Save. Delete discards a new unsaved comment or removes the note being edited. Source navigation remains in the pending list and historical labels; navigation from the bottom aligns the selected text, including inside long paragraphs. Successful admission clears this round’s blue markers and restarts the next round at 1; historical labels retain their source coordinates.
 
 Unsent notes stay in this browser and do not synchronize between devices. Native submission failure restores reference chips. If closing the page or cancellation leaves admission uncertain, inspect the conversation before explicitly attaching the notes again. Disable other annotation plugins while using this one.
 

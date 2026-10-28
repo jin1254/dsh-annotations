@@ -198,6 +198,80 @@ describe('web e2e: independent annotations', () => {
     expect(consoleWatch.pageErrors).toEqual([])
   })
 
+  it('fits the editor to short and long comments and keeps exactly three actions', async () => {
+    onTestFailed(() => saveFailureShot(page, 'annotations-editor'))
+    const { editor, dock, composer, quote } = await pendingNote()
+    await dock.getByRole('button', { name: '1. A quoted statement needs evidence.', exact: true }).click()
+    await dock.getByRole('button', { name: 'Edit annotation', exact: true }).click()
+    const popover = page.locator('[data-annotation-popover]')
+    expect(await popover.getByRole('button').count()).toBe(3)
+    const trash = popover.getByRole('button', { name: 'Delete', exact: true })
+    expect(await trash.locator('svg').count()).toBe(1)
+    await editor.fill('')
+    expect(await popover.getByText('Add a comment…', { exact: true }).count()).toBe(1)
+    expect(await popover.getByRole('button', { name: 'Save', exact: true }).isDisabled()).toBe(true)
+    await expect.poll(() => editor.evaluate(element => element === document.activeElement)).toBe(true)
+    const short = await popover.boundingBox()
+    expect(short).not.toBeNull()
+    const comment = '请解释这段文字中的假设，并给出能够支持结论的测量结果。'.repeat(8)
+    await editor.fill(comment)
+    await expect.poll(async () => {
+      const box = await popover.boundingBox()
+      return box !== null && box.width > short!.width + 60 && box.height > short!.height + 40
+    }).toBe(true)
+    for (const theme of ['dark', 'light'] as const) {
+      await page.emulateMedia({ colorScheme: theme })
+      for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }, { width: 640, height: 320 }]) {
+        await page.setViewportSize(viewport)
+        await expect.poll(() => popover.evaluate(element => {
+          const box = element.getBoundingClientRect()
+          const input = element.querySelector('textarea')!.getBoundingClientRect()
+          const buttons = [...element.querySelectorAll('button')].map(button => button.getBoundingClientRect())
+          return box.left >= 7 && box.right <= window.innerWidth - 7 && box.top >= 7 && box.bottom <= window.innerHeight - 7
+            && input.width > box.width - 40 && input.right <= box.right - 12
+            && buttons.every(button => button.top >= input.bottom && button.bottom <= box.bottom)
+            && buttons[0]!.right < buttons[1]!.left && buttons[1]!.right <= buttons[2]!.left
+            && document.documentElement.scrollWidth <= window.innerWidth
+        })).toBe(true)
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await editor.fill('Two lines of feedback.\nSecond line.')
+    await editor.press('Shift+Enter')
+    expect(await editor.inputValue()).toContain('\n')
+    await editor.dispatchEvent('keydown', { key: 'Enter', isComposing: true })
+    expect(await editor.count()).toBe(1)
+    await editor.press('Escape')
+    await dock.getByRole('button', { name: 'Edit annotation', exact: true }).click()
+    expect(await editor.inputValue()).toBe('Saved comment.')
+    await editor.fill(comment)
+    await popover.getByRole('button', { name: 'Save', exact: true }).click()
+    await dock.getByRole('button', { name: 'Edit annotation', exact: true }).click()
+    expect(await editor.inputValue()).toBe(comment)
+    await editor.fill('Short again.')
+    await expect.poll(async () => {
+      const box = await popover.boundingBox()
+      return box !== null && Math.abs(box.width - short!.width) < 2 && Math.abs(box.height - short!.height) < 2
+    }).toBe(true)
+    await trash.click()
+    await expect.poll(() => composer.locator('[data-composer-chip="dsh-annotations"]').count()).toBe(0)
+    await quote.scrollIntoViewIfNeeded()
+    await quote.evaluate(element => {
+      const range = document.createRange()
+      range.selectNodeContents(element)
+      document.getSelection()?.removeAllRanges()
+      document.getSelection()?.addRange(range)
+    })
+    await quote.dispatchEvent('mouseup')
+    await page.getByRole('button', { name: 'Add to conversation', exact: true }).click()
+    expect(await popover.getByRole('button').count()).toBe(3)
+    await editor.fill('Discard this unsaved note.')
+    await trash.click()
+    await expect.poll(() => popover.count()).toBe(0)
+    expect(await composer.locator('[data-composer-chip="dsh-annotations"]').count()).toBe(0)
+    expect(consoleWatch.pageErrors).toEqual([])
+  })
+
   it('fits drafts to the composer, clears round markers and preserves historical previews and source jumps', async () => {
     onTestFailed(() => saveFailureShot(page, 'annotations'))
     const composer = page.locator('[data-composer-input][contenteditable="true"]').last()
@@ -238,18 +312,18 @@ describe('web e2e: independent annotations', () => {
     const dock = page.locator('[data-annotation-dock]')
     const bubble = page.getByRole('button', { name: 'Edit annotation 1', exact: true })
     await bubble.waitFor()
+    await composer.locator('[data-composer-chip="dsh-annotations"]').click()
     await bubble.click()
     const unsaved = 'Keep this unsaved draft while returning to the quote.'
     await editor.fill(unsaved)
     await source.getByText('Context paragraph 32 provides more material to review.', { exact: true }).scrollIntoViewIfNeeded()
     await expect.poll(() => quote.evaluate(element => element.getBoundingClientRect().bottom)).toBeLessThan(0)
-    await page.getByRole('button', { name: 'Go to source', exact: true }).click()
+    await dock.getByRole('button', { name: '1. A quoted statement needs evidence.', exact: true }).click()
     await expect.poll(() => quote.evaluate((element) => {
       const rect = element.getBoundingClientRect()
       return rect.top >= 0 && rect.bottom <= window.innerHeight
     })).toBe(true)
     expect(await editor.inputValue()).toBe(unsaved)
-    expect(await editor.evaluate(element => element === document.activeElement)).toBe(true)
     expect(await page.evaluate(() => CSS.highlights.size)).toBeGreaterThan(0)
     await editor.press('Escape')
     await expect.poll(() => source.evaluate((element) => {
@@ -263,7 +337,6 @@ describe('web e2e: independent annotations', () => {
       const marker = document.querySelector('button[aria-label="Edit annotation 1"]')!.getBoundingClientRect()
       return marker.top < rect.top && marker.bottom > rect.top
     })).toBe(true)
-    await composer.locator('[data-composer-chip="dsh-annotations"]').click()
     const verifyDock = async (): Promise<boolean> => {
       const left = await dock.boundingBox()
       const right = await page.locator('[data-composer-card]').last().boundingBox()

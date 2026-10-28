@@ -1,7 +1,7 @@
 /** Annotation overlays and compact draft and historical-message labels. */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Button, HoverCard, InlineEditor, useAnchoredPosition } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, HoverCard, IconTrashOutlineRegular, InlineEditor, Tooltip, useAnchoredPosition } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { AnnotationNote } from './protocol.ts'
 import type { AnnotationDockProps, AnnotationLabelProps, AnnotationOverlayProps } from './slots.ts'
 import css from './annotations.module.css'
@@ -12,7 +12,7 @@ import css from './annotations.module.css'
  * @returns a body portal with the current selection action and editor.
  */
 export function AnnotationOverlay({
-  useAnnotationState, mount, add, edit, change, save, cancel, remove, locate, t,
+  useAnnotationState, mount, add, edit, change, save, cancel, remove, t,
 }: AnnotationOverlayProps) {
   const state = useAnnotationState(value => value)
   const seat = useRef<HTMLSpanElement>(null)
@@ -36,22 +36,27 @@ export function AnnotationOverlay({
       aria-label={`${t('edit')} ${bubble.number}`} onClick={() => { edit(bubble.id) }}>{bubble.number}</button>)}
     {target !== null && <>
       <span ref={anchor} className={css.anchor} style={target.position} />
-      <div ref={panel} data-annotation-popover="" className={css.popover} style={position ?? { visibility: 'hidden' }}>
+      <div ref={panel} data-annotation-popover="" className={`${css.popover} ${state.editor !== null ? css.commentPopover : ''}`} style={position ?? { visibility: 'hidden' }}>
         {state.editor === null
           ? <Button size="sm" onMouseDown={(event) => { event.preventDefault() }}
             onClick={add} onKeyDown={(event) => { if (event.key === 'Escape') cancel() }}>{t('add')}</Button>
           : <div className={css.editor}>
-            <InlineEditor value={state.editor.comment} label={t('comment')} onChange={change}
-              onSave={() => { save(state.editor?.comment ?? '') }} onCancel={cancel} />
-            <div className={css.actions}>
-              {state.editor.id !== undefined && <Button size="sm" variant="outline"
-                onClick={() => { if (state.editor?.id !== undefined) remove(state.editor.id) }}>
-                {t('delete')}</Button>}
-              <Button size="sm" variant="outline" onMouseDown={(event) => { event.preventDefault() }}
-                onClick={() => { if (state.editor !== null) locate(state.editor.anchor) }}>{t('locate')}</Button>
+            <span className={css.editorText}>
+              <span aria-hidden="true" className={css.editorMeasure}>{state.editor.comment || t('comment')}</span>
+              {state.editor.comment === '' && <span aria-hidden="true" className={css.editorPlaceholder}>{t('comment')}…</span>}
+              <InlineEditor value={state.editor.comment} label={t('comment')} className={css.commentInput} onChange={change}
+                onSave={() => { save(state.editor?.comment ?? '') }} onCancel={cancel} />
+            </span>
+            <div className={css.editorActions}>
+              <Tooltip label={t('delete')} side="top">
+                <Button className={css.deleteButton} aria-label={t('delete')} onClick={() => {
+                  if (state.editor?.id !== undefined) remove(state.editor.id)
+                  else cancel()
+                }}><IconTrashOutlineRegular size={20} /></Button>
+              </Tooltip>
               <span className={css.spacer} />
-              <Button size="sm" onClick={cancel}>{t('cancel')}</Button>
-              <Button size="sm" variant="primary" disabled={state.editor.comment.trim() === ''}
+              <Button className={css.roundButton} variant="outline" onClick={cancel}>{t('cancel')}</Button>
+              <Button className={css.roundButton} variant="primary" disabled={state.editor.comment.trim() === ''}
                 onClick={() => { save(state.editor?.comment ?? '') }}>{t('save')}</Button>
             </div>
           </div>}
