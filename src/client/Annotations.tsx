@@ -91,12 +91,12 @@ export function AnnotationDock({ useAnnotationState, edit, remove, reattach, loc
   return <div className={css.dock} data-annotation-ui="" data-annotation-dock="">
     {state.issue !== null && <p className={css.error} role="alert">{t(state.issue)}</p>}
     {notes.length > 0 && <div className={css.list}>{notes.map(note => <div key={note.id} className={css.row} data-annotation-row="">
-      <span className={css.rowPreview}><HoverCard inline anchor={<span className={css.rowText}>
+      <span className={css.rowText}>
         <button type="button" className={css.noteLink} onClick={() => { locate(note.anchor) }}>
           {note.number}. {note.anchor.quote}
         </button>
         <span className={css.rowComment} data-annotation-comment="">{note.comment}</span>
-      </span>} content={<Preview notes={[note]} quoteLabel={t('quote')} opinionLabel={t('opinion')} />} /></span>
+      </span>
       {note.status === 'sending' ? <span>{t('sending')}</span> : note.status === 'uncertain'
         ? <div><p className={css.error}>{t('uncertain')}</p><Button size="sm" onClick={() => { reattach(note.id) }}>{t('reattach')}</Button></div>
         : <span className={css.actions}>

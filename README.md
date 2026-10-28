@@ -8,7 +8,7 @@ Select assistant text in DSH Web, add a comment, and send it with your next mess
 
 Verified against the official **DSH 0.2.1-rc.2 Web UI**. This community plugin requires no host patches or custom APIs and is not affiliated with DeepSeek. Other releases and desktop distributions are unverified.
 
-This distribution uses native reference chips: saving a comment automatically attaches a compact label to the composer whose click expands or collapses the note list above it. Each row shows the quote on the left and a gray comment preview on the right; long text is truncated, with full content available on hover or keyboard focus. Comments are never written into editable text. A label-only draft can be submitted with Enter or Send, and ordinary text can accompany it. The history navigator receives a readable annotation title.
+This distribution uses native reference chips: saving a comment automatically attaches a compact label to the composer whose click expands or collapses the note list above it. Each row places a left-aligned gray comment beside its quote with a gap; long quotes use at most a quarter of the text area. Long text is truncated. Click the quote to read the source or edit the comment to read its full text. Pending rows have no hover cards; sent labels retain their previews. Comments are never written into editable text. A label-only draft can be submitted with Enter or Send, and ordinary text can accompany it. The history navigator receives a readable annotation title.
 
 ## Use
 

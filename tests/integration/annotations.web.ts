@@ -170,7 +170,9 @@ describe('web e2e: independent annotations', () => {
           const comment = element.querySelector('[data-annotation-comment]')!
           const left = quote.getBoundingClientRect()
           const right = comment.getBoundingClientRect()
-          return left.right <= right.left && Math.abs(left.top - right.top) < 8
+          const text = quote.parentElement!.getBoundingClientRect()
+          return Math.abs(right.left - left.right - 24) < 1 && Math.abs(left.top - right.top) < 8
+            && left.width >= text.width * 0.24 && left.width <= text.width * 0.26
             && getComputedStyle(comment).textOverflow === 'ellipsis'
             && getComputedStyle(comment).color !== getComputedStyle(quote).color
             && document.documentElement.scrollWidth <= window.innerWidth
@@ -179,8 +181,32 @@ describe('web e2e: independent annotations', () => {
     }
     await page.setViewportSize({ width: 1440, height: 900 })
     await row.getByRole('button', { name: '1. A quoted statement needs evidence.', exact: true }).hover()
-    await page.locator('[data-annotation-preview]').getByText(comment, { exact: true }).waitFor()
+    // The former card opened after 500ms; hold the pointer past that dwell.
+    await page.waitForTimeout(750)
+    expect(await page.locator('[data-annotation-preview]').count()).toBe(0)
     await page.mouse.move(0, 0)
+    await quote.scrollIntoViewIfNeeded()
+    await quote.evaluate(element => {
+      const range = document.createRange()
+      range.setStart(element.firstChild!, 0)
+      range.setEnd(element.firstChild!, 6)
+      document.getSelection()?.removeAllRanges()
+      document.getSelection()?.addRange(range)
+    })
+    await quote.dispatchEvent('mouseup')
+    await page.getByRole('button', { name: 'Add to conversation', exact: true }).click()
+    await editor.fill('Keep this comment beside a short quote.')
+    await editor.press('Enter')
+    const shortRow = row.last()
+    expect(await row.count()).toBe(2)
+    expect(await shortRow.evaluate(element => {
+      const quote = element.querySelector('button')!.getBoundingClientRect()
+      const comment = element.querySelector('[data-annotation-comment]')!.getBoundingClientRect()
+      const text = element.querySelector('button')!.parentElement!.getBoundingClientRect()
+      return quote.width < text.width * 0.25 && Math.abs(comment.left - quote.right - 24) < 1
+        && comment.left < text.left + text.width * 0.25
+    })).toBe(true)
+    await shortRow.getByRole('button', { name: 'Delete', exact: true }).click()
     // A reload during submission must retain a visible recovery action without a native chip.
     await page.evaluate(() => {
       for (const key of Object.keys(localStorage).filter(key => key.startsWith('dsh-annotations/v1/'))) {
